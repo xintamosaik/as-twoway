@@ -3,6 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <title>AS memory lanes</title>
+  <style>
+    :root {
+      color-scheme: light;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #10141a;
+    }
+
+    #screen {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      border: 2px solid #2a3342;
+      background: #000;
+    }
+  </style>
 </head>
 <body>
   <canvas id="screen" width="160" height="100"></canvas>
@@ -55,6 +75,23 @@
 
     const canvas = document.getElementById("screen");
     const ctx = canvas.getContext("2d");
+
+    canvas.width = w;
+    canvas.height = h;
+    ctx.imageSmoothingEnabled = false;
+
+    function resizeCanvas() {
+      // Keep pixels crisp by scaling only in whole-number steps.
+      const maxScaleX = Math.floor((window.innerWidth - 16) / w);
+      const maxScaleY = Math.floor((window.innerHeight - 16) / h);
+      const scale = Math.max(1, Math.min(maxScaleX, maxScaleY));
+
+      canvas.style.width = `${w * scale}px`;
+      canvas.style.height = `${h * scale}px`;
+    }
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
 
     function frameLoop() {
       // JS writes input lane
