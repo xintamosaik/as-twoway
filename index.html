@@ -103,6 +103,7 @@
     canvas.width = w;
     canvas.height = h;
     ctx.imageSmoothingEnabled = false;
+    const image = new ImageData(frame, w, h);
 
     function resizeCanvas() {
       // Keep pixels crisp by scaling only in whole-number steps.
@@ -144,7 +145,6 @@
       debug.textContent = `ball: (${state[0]}, ${state[1]})\nleftY: ${state[2]}\nrightY: ${state[3]}`;
 
       // JS reads framebuffer lane
-      const image = new ImageData(frame, w, h);
       ctx.putImageData(image, 0, 0);
 
       requestAnimationFrame(frameLoop);
