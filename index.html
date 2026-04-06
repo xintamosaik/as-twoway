@@ -32,9 +32,8 @@
     const input = new Uint8Array(memory.buffer, inputPtr(), inputLen());
 
     // JS writes input lane
-    input[0] = 20; // x offset
-    input[1] = 40; // y offset
-    input[2] = 1;  // mode
+    input[0] = 20; // left paddle Y
+    input[1] = 40; // right paddle Y
 
     // WASM reads input lane and writes framebuffer lane
     render();
