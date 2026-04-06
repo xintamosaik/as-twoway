@@ -93,15 +93,27 @@
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
 
-    function frameLoop() {
+    let last = performance.now();
+    let acc = 0;
+    const step = 1000 / 120;
+
+    function frameLoop(now) {
+      acc += now - last;
+      last = now;
+
       // JS writes input lane
       input[0] = keys.KeyW ? 1 : 0;
       input[1] = keys.KeyS ? 1 : 0;
       input[2] = keys.ArrowUp ? 1 : 0;
       input[3] = keys.ArrowDown ? 1 : 0;
 
-      // WASM runs simulation and writes framebuffer lane
-      wasmTick();
+      // Run simulation at a fixed cadence, independent of display refresh.
+      while (acc >= step) {
+        wasmTick();
+        acc -= step;
+      }
+
+      // WASM writes framebuffer lane
       render();
 
       // JS reads framebuffer lane
@@ -111,7 +123,7 @@
       requestAnimationFrame(frameLoop);
     }
 
-    frameLoop();
+    requestAnimationFrame(frameLoop);
   </script>
 </body>
 </html>

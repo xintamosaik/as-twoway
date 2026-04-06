@@ -9,8 +9,8 @@ const PADDLE_W: i32 = 4;
 const PADDLE_H: i32 = 20;
 const PADDLE_MARGIN: i32 = 6;
 const BALL_SIZE: i32 = 4;
-const PADDLE_SPEED: i32 = 2;
-const BALL_SPEED_X: i32 = 2;
+const PADDLE_SPEED: i32 = 1;
+const BALL_SPEED_X: i32 = 1;
 const BALL_SPEED_Y: i32 = 1;
 
 const FRAME_LEN: i32 = WIDTH * HEIGHT * BYTES_PER_PIXEL;
