@@ -52,6 +52,11 @@
     const frame = new Uint8ClampedArray(memory.buffer, framePtr(), frameLen());
     const input = new Uint8Array(memory.buffer, inputPtr(), inputLen());
 
+    const IN_LEFT_UP = 0;
+    const IN_LEFT_DOWN = 1;
+    const IN_RIGHT_UP = 2;
+    const IN_RIGHT_DOWN = 3;
+
     const keys = {
       KeyW: false,
       KeyS: false,
@@ -102,10 +107,10 @@
       last = now;
 
       // JS writes input lane
-      input[0] = keys.KeyW ? 1 : 0;
-      input[1] = keys.KeyS ? 1 : 0;
-      input[2] = keys.ArrowUp ? 1 : 0;
-      input[3] = keys.ArrowDown ? 1 : 0;
+      input[IN_LEFT_UP] = keys.KeyW ? 1 : 0;
+      input[IN_LEFT_DOWN] = keys.KeyS ? 1 : 0;
+      input[IN_RIGHT_UP] = keys.ArrowUp ? 1 : 0;
+      input[IN_RIGHT_DOWN] = keys.ArrowDown ? 1 : 0;
 
       // Run simulation at a fixed cadence, independent of display refresh.
       while (acc >= step) {

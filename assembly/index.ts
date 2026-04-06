@@ -16,6 +16,11 @@ const BALL_SPEED_Y: i32 = 1;
 const FRAME_LEN: i32 = WIDTH * HEIGHT * BYTES_PER_PIXEL;
 const INPUT_LEN: i32 = 16;
 
+const IN_LEFT_UP: i32 = 0;
+const IN_LEFT_DOWN: i32 = 1;
+const IN_RIGHT_UP: i32 = 2;
+const IN_RIGHT_DOWN: i32 = 3;
+
 // Put both regions after a small safety gap.
 // Avoid low addresses and keep it visually obvious.
 const FRAME_PTR: usize = 1024;
@@ -63,16 +68,12 @@ function clamp(value: i32, min: i32, max: i32): i32 {
   return value;
 }
 
-// Advance simulation by one frame using input bytes.
-// input[0] = left up (W)
-// input[1] = left down (S)
-// input[2] = right up (ArrowUp)
-// input[3] = right down (ArrowDown)
+// Advance simulation by one frame using input protocol bytes.
 export function tick(): void {
-  let leftUp = readInput(0) != 0;
-  let leftDown = readInput(1) != 0;
-  let rightUp = readInput(2) != 0;
-  let rightDown = readInput(3) != 0;
+  let leftUp = readInput(IN_LEFT_UP) != 0;
+  let leftDown = readInput(IN_LEFT_DOWN) != 0;
+  let rightUp = readInput(IN_RIGHT_UP) != 0;
+  let rightDown = readInput(IN_RIGHT_DOWN) != 0;
 
   if (leftUp && !leftDown) leftY -= PADDLE_SPEED;
   if (leftDown && !leftUp) leftY += PADDLE_SPEED;
