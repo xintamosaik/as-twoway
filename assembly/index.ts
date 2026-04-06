@@ -13,20 +13,27 @@ const PADDLE_SPEED: i32 = 1;
 const BALL_SPEED_X: i32 = 1;
 const BALL_SPEED_Y: i32 = 1;
 
+// memory map
+// [FRAME region][INPUT region][STATE region]
+const MEMORY_BASE_PTR: usize = 1024;
+
 const FRAME_LEN: i32 = WIDTH * HEIGHT * BYTES_PER_PIXEL;
 const INPUT_LEN: i32 = 16;
 const STATE_LEN: i32 = 16;
+
+const FRAME_PTR: usize = MEMORY_BASE_PTR;
+const FRAME_END: usize = FRAME_PTR + <usize>FRAME_LEN;
+
+const INPUT_PTR: usize = FRAME_END;
+const INPUT_END: usize = INPUT_PTR + <usize>INPUT_LEN;
+
+const STATE_PTR: usize = INPUT_END;
+const STATE_END: usize = STATE_PTR + <usize>STATE_LEN;
 
 const IN_LEFT_UP: i32 = 0;
 const IN_LEFT_DOWN: i32 = 1;
 const IN_RIGHT_UP: i32 = 2;
 const IN_RIGHT_DOWN: i32 = 3;
-
-// Put both regions after a small safety gap.
-// Avoid low addresses and keep it visually obvious.
-const FRAME_PTR: usize = 1024;
-const INPUT_PTR: usize = FRAME_PTR + FRAME_LEN;
-const STATE_PTR: usize = INPUT_PTR + INPUT_LEN;
 
 // Metadata exports
 export function width(): i32 { return WIDTH; }
@@ -34,12 +41,15 @@ export function height(): i32 { return HEIGHT; }
 
 export function framePtr(): usize { return FRAME_PTR; }
 export function frameLen(): i32 { return FRAME_LEN; }
+export function frameEnd(): usize { return FRAME_END; }
 
 export function inputPtr(): usize { return INPUT_PTR; }
 export function inputLen(): i32 { return INPUT_LEN; }
+export function inputEnd(): usize { return INPUT_END; }
 
 export function statePtr(): usize { return STATE_PTR; }
 export function stateLen(): i32 { return STATE_LEN; }
+export function stateEnd(): usize { return STATE_END; }
 
 // JS writes input bytes here.
 // WASM reads them here.
@@ -162,7 +172,7 @@ export function render(): void {
 
 function clearFrame(rgba: u32): void {
   let p = FRAME_PTR;
-  const end = FRAME_PTR + <usize>FRAME_LEN;
+  const end = FRAME_END;
   while (p < end) {
     writePixel32(p, rgba);
     p += 4;
