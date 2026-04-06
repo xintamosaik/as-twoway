@@ -15,6 +15,7 @@ const BALL_SPEED_Y: i32 = 1;
 
 const FRAME_LEN: i32 = WIDTH * HEIGHT * BYTES_PER_PIXEL;
 const INPUT_LEN: i32 = 16;
+const STATE_LEN: i32 = 16;
 
 const IN_LEFT_UP: i32 = 0;
 const IN_LEFT_DOWN: i32 = 1;
@@ -25,6 +26,7 @@ const IN_RIGHT_DOWN: i32 = 3;
 // Avoid low addresses and keep it visually obvious.
 const FRAME_PTR: usize = 1024;
 const INPUT_PTR: usize = FRAME_PTR + FRAME_LEN;
+const STATE_PTR: usize = INPUT_PTR + INPUT_LEN;
 
 // Metadata exports
 export function width(): i32 { return WIDTH; }
@@ -36,10 +38,26 @@ export function frameLen(): i32 { return FRAME_LEN; }
 export function inputPtr(): usize { return INPUT_PTR; }
 export function inputLen(): i32 { return INPUT_LEN; }
 
+export function statePtr(): usize { return STATE_PTR; }
+export function stateLen(): i32 { return STATE_LEN; }
+
 // JS writes input bytes here.
 // WASM reads them here.
 function readInput(index: i32): u8 {
   return load<u8>(INPUT_PTR + <usize>index);
+}
+
+// WASM writes state here.
+// JS reads it here.
+function writeStateI32(byteOffset: i32, value: i32): void {
+  store<i32>(STATE_PTR + <usize>byteOffset, value);
+}
+
+function publishState(): void {
+  writeStateI32(0, ballX);
+  writeStateI32(4, ballY);
+  writeStateI32(8, leftY);
+  writeStateI32(12, rightY);
 }
 
 // WASM writes framebuffer here.
@@ -127,6 +145,8 @@ export function tick(): void {
     ballVX = -BALL_SPEED_X;
     ballVY = BALL_SPEED_Y;
   }
+
+  publishState();
 }
 
 // Render current simulation state into framebuffer memory.
