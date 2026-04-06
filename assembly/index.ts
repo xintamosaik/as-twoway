@@ -39,12 +39,16 @@ function readInput(index: i32): u8 {
 
 // WASM writes framebuffer here.
 // JS reads it here.
-function writePixel(offset: usize, r: u8, g: u8, b: u8, a: u8): void {
-  store<u8>(offset, r);
-  store<u8>(offset + 1, g);
-  store<u8>(offset + 2, b);
-  store<u8>(offset + 3, a);
+function writePixel32(offset: usize, rgba: u32): void {
+  store<u32>(offset, rgba);
 }
+
+function packRGBA(r: u8, g: u8, b: u8, a: u8): u32 {
+  return <u32>r | (<u32>g << 8) | (<u32>b << 16) | (<u32>a << 24);
+}
+
+const BG_RGBA: u32 = packRGBA(8, 12, 20, 255);
+const FG_RGBA: u32 = packRGBA(235, 235, 235, 255);
 
 let leftY: i32 = (HEIGHT - PADDLE_H) / 2;
 let rightY: i32 = (HEIGHT - PADDLE_H) / 2;
@@ -129,25 +133,33 @@ export function render(): void {
   const leftX = PADDLE_MARGIN;
   const rightX = WIDTH - PADDLE_MARGIN - PADDLE_W;
 
+  clearFrame(BG_RGBA);
+  drawRect(leftX, leftY, PADDLE_W, PADDLE_H, FG_RGBA);
+  drawRect(rightX, rightY, PADDLE_W, PADDLE_H, FG_RGBA);
+  drawRect(ballX, ballY, BALL_SIZE, BALL_SIZE, FG_RGBA);
+}
+
+function clearFrame(rgba: u32): void {
   let p = FRAME_PTR;
+  const end = FRAME_PTR + <usize>FRAME_LEN;
+  while (p < end) {
+    writePixel32(p, rgba);
+    p += 4;
+  }
+}
 
-  for (let y: i32 = 0; y < HEIGHT; y++) {
-    for (let x: i32 = 0; x < WIDTH; x++) {
-      let inLeftPaddle = x >= leftX && x < leftX + PADDLE_W && y >= leftY && y < leftY + PADDLE_H;
-      let inRightPaddle = x >= rightX && x < rightX + PADDLE_W && y >= rightY && y < rightY + PADDLE_H;
-      let inBall = x >= ballX && x < ballX + BALL_SIZE && y >= ballY && y < ballY + BALL_SIZE;
+function drawRect(x: i32, y: i32, w: i32, h: i32, rgba: u32): void {
+  const x0 = clamp(x, 0, WIDTH);
+  const y0 = clamp(y, 0, HEIGHT);
+  const x1 = clamp(x + w, 0, WIDTH);
+  const y1 = clamp(y + h, 0, HEIGHT);
 
-      let r: u8 = 8;
-      let g: u8 = 12;
-      let b: u8 = 20;
+  if (x0 >= x1 || y0 >= y1) return;
 
-      if (inLeftPaddle || inRightPaddle || inBall) {
-        r = 235;
-        g = 235;
-        b = 235;
-      }
-
-      writePixel(p, r, g, b, 255);
+  for (let yy: i32 = y0; yy < y1; yy++) {
+    let p = FRAME_PTR + <usize>((yy * WIDTH + x0) * BYTES_PER_PIXEL);
+    for (let xx: i32 = x0; xx < x1; xx++) {
+      writePixel32(p, rgba);
       p += 4;
     }
   }
