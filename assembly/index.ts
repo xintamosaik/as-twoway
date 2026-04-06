@@ -1,8 +1,8 @@
 // Fixed layout for first experiment.
 // Keep it stupid and obvious.
 
-const WIDTH: i32 = 64;
-const HEIGHT: i32 = 64;
+const WIDTH: i32 = 160;
+const HEIGHT: i32 = 100;
 const BYTES_PER_PIXEL: i32 = 4;
 
 const FRAME_LEN: i32 = WIDTH * HEIGHT * BYTES_PER_PIXEL;
