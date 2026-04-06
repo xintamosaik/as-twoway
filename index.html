@@ -8,17 +8,12 @@
   <canvas id="screen" width="64" height="64"></canvas>
 
   <script type="module">
-    const memory = new WebAssembly.Memory({
-      initial: 1,   // 64 KiB
-      maximum: 1
-    });
-
     const wasm = await WebAssembly.instantiateStreaming(
       fetch("./build/release.wasm"),
-      {
-        env: { memory }
-      }
+      {}
     );
+
+    const memory = wasm.instance.exports.memory;
 
     const {
       width,
