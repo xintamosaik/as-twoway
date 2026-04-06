@@ -1,154 +1,126 @@
-Three good improvements before you move on:
+Three best next moves:
 
-## 1. Split “game state step” from “wall clock frame”
+## 1. Add a tiny state/debug lane
 
-Right now `tick()` runs once per `requestAnimationFrame`, so game speed depends on browser/frame rate.
+Right now you have:
 
-Better:
+* input lane: JS → WASM
+* frame lane: WASM → JS
 
-* keep rendering on every browser frame
-* advance simulation with a fixed timestep
+Add a third, very small **state/output lane** from WASM to JS.
 
-Why it matters:
+For example:
 
-* fairer language comparison
-* cleaner game logic
-* easier later when FPS changes
+* ball X
+* ball Y
+* left paddle Y
+* right paddle Y
+* maybe scores
 
-In JS, that means an accumulator loop instead of one `tick()` per RAF.
+Why this is worth doing:
 
-Very rough shape:
+* it tests non-graphics data exchange too
+* it gives you a cleaner cross-language comparison
+* it lets JS inspect state without parsing pixels
 
-```js
-let last = performance.now();
-let acc = 0;
-const step = 1000 / 60;
-
-function frameLoop(now) {
-  acc += now - last;
-  last = now;
-
-  input[0] = keys.KeyW ? 1 : 0;
-  input[1] = keys.KeyS ? 1 : 0;
-  input[2] = keys.ArrowUp ? 1 : 0;
-  input[3] = keys.ArrowDown ? 1 : 0;
-
-  while (acc >= step) {
-    wasmTick();
-    acc -= step;
-  }
-
-  render();
-  const image = new ImageData(frame, w, h);
-  ctx.putImageData(image, 0, 0);
-
-  requestAnimationFrame(frameLoop);
-}
-
-requestAnimationFrame(frameLoop);
-```
-
-That is probably the most important upgrade.
-
----
-
-## 2. Stop painting pixel-by-pixel in WASM with `writePixel()`
-
-Your current code is nice and obvious, but every pixel does four separate stores through a helper.
-
-That is fine for now, but it adds noise when what you want to compare is memory ergonomics, not avoidable per-pixel overhead.
-
-Two cleaner directions:
-
-### A. Add `clearFrame(r, g, b)`
-
-Clear the whole framebuffer first, then draw paddles and ball as rectangles.
-
-### B. Write packed `u32` pixels
-
-Instead of 4 separate `store<u8>`, write one `store<u32>`.
-
-That would look more like:
+Example shape in AS:
 
 ```ts
-function writePixel32(offset: usize, rgba: u32): void {
-  store<u32>(offset, rgba);
+const STATE_PTR: usize = INPUT_PTR + INPUT_LEN;
+const STATE_LEN: i32 = 16;
+
+export function statePtr(): usize { return STATE_PTR; }
+export function stateLen(): i32 { return STATE_LEN; }
+
+function writeStateI32(byteOffset: i32, value: i32): void {
+  store<i32>(STATE_PTR + <usize>byteOffset, value);
+}
+
+function publishState(): void {
+  writeStateI32(0, ballX);
+  writeStateI32(4, ballY);
+  writeStateI32(8, leftY);
+  writeStateI32(12, rightY);
 }
 ```
 
-Then use one packed colour value.
+Then call `publishState()` in `tick()` or before returning from it.
 
-Why it matters:
+This is a very good next test because many real apps need:
 
-* less inner-loop overhead
-* code becomes more “framebuffer minded”
-* closer to how you’ll likely think for retro graphics anyway
+* input in
+* state out
+* pixels out
 
-Even better: stop scanning the whole screen for object membership and instead:
-
-* clear background
-* draw left paddle rect
-* draw right paddle rect
-* draw ball rect
-
-That is a much better rendering model for this project.
+not just pixels.
 
 ---
 
-## 3. Make the input lane a tiny protocol instead of raw magic indices
+## 2. Make the memory map explicit and exported
 
-Right now this works:
+Right now the layout is understandable, but still scattered across constants. Before moving on, make the layout a first-class thing.
 
-```ts
-input[0] = keys.KeyW ? 1 : 0;
-input[1] = keys.KeyS ? 1 : 0;
-input[2] = keys.ArrowUp ? 1 : 0;
-input[3] = keys.ArrowDown ? 1 : 0;
-```
+That means exporting all region boundaries in a deliberate way:
 
-But it will get messy fast.
+* frame ptr/len
+* input ptr/len
+* state ptr/len
 
-Before moving on, define named slots on both sides.
+You already do this for frame and input. Extend it consistently and maybe group the constants in one section called `memory map`.
 
-In AssemblyScript:
+Why this matters:
 
-```ts
-const IN_LEFT_UP: i32 = 0;
-const IN_LEFT_DOWN: i32 = 1;
-const IN_RIGHT_UP: i32 = 2;
-const IN_RIGHT_DOWN: i32 = 3;
-```
+* makes comparison with Zig/Rust/C much fairer
+* sharpens the architecture
+* reveals whether the language feels pleasant for “manual protocol + manual layout”
 
-In JS:
+You are basically building a tiny console:
+
+* framebuffer
+* controller memory
+* state memory
+
+Make that explicit.
+
+---
+
+## 3. Reuse the `ImageData` object instead of recreating it every frame
+
+Right now:
 
 ```js
-const IN_LEFT_UP = 0;
-const IN_LEFT_DOWN = 1;
-const IN_RIGHT_UP = 2;
-const IN_RIGHT_DOWN = 3;
+const image = new ImageData(frame, w, h);
+ctx.putImageData(image, 0, 0);
 ```
 
-Then use those constants everywhere.
+That creates a new `ImageData` every frame. It works, but it adds unnecessary host-side churn and muddies the comparison a bit.
 
-Why it matters:
+Do this once:
 
-* reduces accidental mismatch between JS and WASM
-* makes later expansion easier
-* gives you a more honest test of host/WASM protocol design
+```js
+const image = new ImageData(frame, w, h);
+```
 
-You could even reserve bytes now for:
+Then in the loop:
 
-* buttons
-* reset
-* pause
-* delta or frame counter
+```js
+ctx.putImageData(image, 0, 0);
+```
+
+Why this matters:
+
+* removes a JS-side allocation hotspot
+* keeps the benchmark more about WASM memory flow
+* makes later comparisons cleaner
+
+It’s a small fix, but a good one.
 
 ---
 
-If I had to prioritise them:
+If I had to order them by value:
 
-1. fixed timestep
-2. rectangle-based rendering / packed pixel writes
-3. named input protocol
+1. add a small state/debug lane
+2. make the whole memory map explicit
+3. reuse `ImageData`
 
-That gives you a much stronger baseline for comparing Zig, Rust, and C.
+After that, I’d say you have a strong enough AssemblyScript baseline to compare against Zig, Rust, and C without the comparison being too shallow.
