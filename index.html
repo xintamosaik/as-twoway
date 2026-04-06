@@ -22,6 +22,7 @@
       frameLen,
       inputPtr,
       inputLen,
+      tick: wasmTick,
       render
     } = wasm.instance.exports;
 
@@ -31,18 +32,49 @@
     const frame = new Uint8ClampedArray(memory.buffer, framePtr(), frameLen());
     const input = new Uint8Array(memory.buffer, inputPtr(), inputLen());
 
-    // JS writes input lane
-    input[0] = 20; // left paddle Y
-    input[1] = 40; // right paddle Y
+    const keys = {
+      KeyW: false,
+      KeyS: false,
+      ArrowUp: false,
+      ArrowDown: false
+    };
 
-    // WASM reads input lane and writes framebuffer lane
-    render();
+    window.addEventListener("keydown", (event) => {
+      if (event.code in keys) {
+        keys[event.code] = true;
+        event.preventDefault();
+      }
+    });
 
-    // JS reads framebuffer lane
+    window.addEventListener("keyup", (event) => {
+      if (event.code in keys) {
+        keys[event.code] = false;
+        event.preventDefault();
+      }
+    });
+
     const canvas = document.getElementById("screen");
     const ctx = canvas.getContext("2d");
-    const image = new ImageData(frame, w, h);
-    ctx.putImageData(image, 0, 0);
+
+    function frameLoop() {
+      // JS writes input lane
+      input[0] = keys.KeyW ? 1 : 0;
+      input[1] = keys.KeyS ? 1 : 0;
+      input[2] = keys.ArrowUp ? 1 : 0;
+      input[3] = keys.ArrowDown ? 1 : 0;
+
+      // WASM runs simulation and writes framebuffer lane
+      wasmTick();
+      render();
+
+      // JS reads framebuffer lane
+      const image = new ImageData(frame, w, h);
+      ctx.putImageData(image, 0, 0);
+
+      requestAnimationFrame(frameLoop);
+    }
+
+    frameLoop();
   </script>
 </body>
 </html>
