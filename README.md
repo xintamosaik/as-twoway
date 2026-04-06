@@ -82,7 +82,10 @@ Then open the local URL shown by `serve` (usually <http://localhost:3000>). The 
 npm test
 ```
 
-Current test coverage is intentionally small and includes a basic exported function check.
+Current test coverage is intentionally small and includes smoke checks for:
+- exported dimensions (`width`, `height`)
+- contiguous lane layout (`FRAME -> INPUT -> STATE`)
+- lane bounds fitting inside WASM memory
 
 ## Project layout
 
